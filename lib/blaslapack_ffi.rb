@@ -17,8 +17,35 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with blaslapack_ffi.  If not, see [http://www.gnu.org/licenses/].
 =end
+require 'ffi'
 require "blaslapack_ffi/version"
+require "blaslapack_ffi/array"
 
 module BlasLapackFFI
-  # Your code goes here...
+  module BlasFFI
+    extend FFI::Library
+
+    ffi_lib "libblas.so"
+
+    attach_function :dnrm2, :dnrm2_, [:pointer, :pointer, :pointer], :double
+    attach_function :snrm2, :snrm2_, [:pointer, :pointer, :pointer], :float
+  end
+
+  def dnrm2 ary, incx=1
+    raise TypeError unless ary.is_a?(DArray)
+    incx=incx.to_i
+    n = ary.size/incx
+    ibuf = FFI::MemoryPointer.new(:int, 2)
+    ibuf.write_array_of_int([n, incx])
+    return BlasFFI::dnrm2(ibuf, ary.ptr, ibuf+ibuf.type_size)
+  end
+
+  def snrm2 ary, incx=1
+    raise TypeError unless ary.is_a?(SArray)
+    incx=incx.to_i
+    n = ary.size/incx
+    ibuf = FFI::MemoryPointer.new(:int, 2)
+    ibuf.write_array_of_int([n, incx])
+    return BlasFFI::snrm2(ibuf, ary.ptr, ibuf+ibuf.type_size)
+  end
 end
