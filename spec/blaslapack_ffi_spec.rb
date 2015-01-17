@@ -20,28 +20,33 @@ along with blaslapack_ffi.  If not, see [http://www.gnu.org/licenses/].
 require 'spec_helper'
 require 'blaslapack_ffi'
 
-describe BlasLapackFFI do
+random_array = Array.new(rand(4..8)){rand(-1.0..1.0)}
+
+describe BlasLapackFFI, random_array: random_array do
   include described_class
   DArray = described_class::DArray
   SArray = described_class::SArray
 
+  let(:random_array){example.metadata[:random_array]}
+  let(:norm){random_array.inject(0){|s,n| s+n**2}**0.5}
+
   describe '#dnrm2' do
-    context '(DArray[1])' do
-      specify{expect(dnrm2(DArray[1])).to eq (1.0)}
+    context '(DArray%p)' % [random_array] do
+      specify{expect(dnrm2(DArray[*random_array])).to be_within(1e-5).of(norm)}
     end
 
     context '(SArray[1])' do
-      specify{expect{dnrm2(described_class::SArray[1])}.to raise_error TypeError}
+      specify{expect{dnrm2(SArray[*random_array])}.to raise_error TypeError}
     end
   end
 
   describe '#snrm2' do
-    context '(SArray[1])' do
-      specify{expect(snrm2(described_class::SArray[1])).to eq (1.0)}
+    context '(SArray%p)' % [random_array] do
+      specify{expect(snrm2(SArray[*random_array])).to be_within(1e-5).of(norm)}
     end
 
     context '(DArray[1])' do
-      specify{expect{snrm2(described_class::DArray[1])}.to raise_error TypeError}
+      specify{expect{snrm2(DArray[*random_array])}.to raise_error TypeError}
     end
   end
 end
