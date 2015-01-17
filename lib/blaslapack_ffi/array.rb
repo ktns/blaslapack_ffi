@@ -73,7 +73,7 @@ module BlasLapackFFI
       end
 
       def get i
-        get_double(i)
+        get_double(i*type_size)
       end
     end
   end
@@ -91,7 +91,7 @@ module BlasLapackFFI
       end
 
       def get i
-        get_float(i)
+        get_float(i*type_size)
       end
     end
   end
