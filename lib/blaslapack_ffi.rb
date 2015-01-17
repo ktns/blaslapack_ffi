@@ -27,10 +27,19 @@ module BlasLapackFFI
 
     ffi_lib "libblas.so"
 
+    ##
+    # DNRM2 routine
+    # @return [Float] Euclidean norm of x
     attach_function :dnrm2, :dnrm2_, [:pointer, :pointer, :pointer], :double
+    ##
+    # SNRM2 routine
+    # @return [Float] Euclidean norm of x
     attach_function :snrm2, :snrm2_, [:pointer, :pointer, :pointer], :float
   end
 
+  # DNRM2 routine
+  # @param [SArray] ary Array of double precision floating number
+  # @return [Float] Euclidean norm of x
   def dnrm2 ary, incx=1
     raise TypeError unless ary.is_a?(DArray)
     incx=incx.to_i
@@ -40,6 +49,9 @@ module BlasLapackFFI
     return BlasFFI::dnrm2(ibuf, ary.ptr, ibuf+ibuf.type_size)
   end
 
+  # SNRM2 routine
+  # @param [SArray] ary Array of single precision floating number
+  # @return [Float] Euclidean norm of x
   def snrm2 ary, incx=1
     raise TypeError unless ary.is_a?(SArray)
     incx=incx.to_i
