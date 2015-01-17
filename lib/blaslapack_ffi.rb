@@ -40,10 +40,10 @@ module BlasLapackFFI
   # DNRM2 routine
   # @param [SArray] ary Array of double precision floating number
   # @return [Float] Euclidean norm of x
-  def dnrm2 ary, incx=1
+  def dnrm2 ary
     raise TypeError unless ary.is_a?(DArray)
-    incx=incx.to_i
-    n = ary.size/incx
+    incx=ary.incx rescue 1
+    n = ary.size
     ibuf = FFI::MemoryPointer.new(:int, 2)
     ibuf.write_array_of_int([n, incx])
     return BlasFFI::dnrm2(ibuf, ary.ptr, ibuf+ibuf.type_size)
@@ -52,10 +52,10 @@ module BlasLapackFFI
   # SNRM2 routine
   # @param [SArray] ary Array of single precision floating number
   # @return [Float] Euclidean norm of x
-  def snrm2 ary, incx=1
+  def snrm2 ary
     raise TypeError unless ary.is_a?(SArray)
-    incx=incx.to_i
-    n = ary.size/incx
+    incx=ary.incx rescue 1
+    n = ary.size
     ibuf = FFI::MemoryPointer.new(:int, 2)
     ibuf.write_array_of_int([n, incx])
     return BlasFFI::snrm2(ibuf, ary.ptr, ibuf+ibuf.type_size)
