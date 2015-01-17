@@ -22,6 +22,36 @@ require "blaslapack_ffi/version"
 require "blaslapack_ffi/array"
 
 module BlasLapackFFI
+  class FortranArguments < FFI::Struct
+    # Allocate a struct and initialize members
+    def initialize hash
+      super()
+      hash.each do |k,v|
+        self[k] = v
+      end
+    end
+
+    # Define a new struct for arguments of a FORTRAN function
+    # @param layout [Array] Specifies the layout of the new struct
+    # @return the new class that represents the new struct
+    def self.define layout
+      Class.new(self) do
+        self.layout layout
+      end
+    end
+
+    # @return [Array] Returns an array of pointers to each members
+    def to_pointers
+      members.map do |k|
+        if self.class.layout[k].kind_of?(FFI::StructLayout::Pointer)
+          self[k]
+        else
+          to_ptr + offset_of(k)
+        end
+      end
+    end
+  end
+
   module BlasFFI
     extend FFI::Library
 
@@ -37,6 +67,7 @@ module BlasLapackFFI
     attach_function :snrm2, :snrm2_, [:pointer, :pointer, :pointer], :float
   end
 
+  DNRM2_ARGS = FortranArguments.define(n: :int, x: :pointer, incx: :int)
   # DNRM2 routine
   # @param [SArray] ary Array of double precision floating number
   # @return [Float] Euclidean norm of x
@@ -44,11 +75,11 @@ module BlasLapackFFI
     raise TypeError unless ary.is_a?(DArray)
     incx=ary.incx rescue 1
     n = ary.size
-    ibuf = FFI::MemoryPointer.new(:int, 2)
-    ibuf.write_array_of_int([n, incx])
-    return BlasFFI::dnrm2(ibuf, ary.ptr, ibuf+ibuf.type_size)
+    args = DNRM2_ARGS.new(n: n, incx: incx, x: ary.ptr)
+    return BlasFFI::dnrm2(*args.to_pointers)
   end
 
+  SNRM2_ARGS = FortranArguments.define(n: :int, x: :pointer, incx: :int)
   # SNRM2 routine
   # @param [SArray] ary Array of single precision floating number
   # @return [Float] Euclidean norm of x
@@ -56,8 +87,7 @@ module BlasLapackFFI
     raise TypeError unless ary.is_a?(SArray)
     incx=ary.incx rescue 1
     n = ary.size
-    ibuf = FFI::MemoryPointer.new(:int, 2)
-    ibuf.write_array_of_int([n, incx])
-    return BlasFFI::snrm2(ibuf, ary.ptr, ibuf+ibuf.type_size)
+    args = DNRM2_ARGS.new(n: n, incx: incx, x: ary.ptr)
+    return BlasFFI::snrm2(*args.to_pointers)
   end
 end
