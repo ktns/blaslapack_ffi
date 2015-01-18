@@ -92,14 +92,16 @@ module BlasLapackFFI
     end
   end
 
-  ## DNRM2 routine
+  # @!method dnrm2(n, x, incx)
+  # DNRM2 routine
   # @param [Integer] n size of x
   # @param [DArray] x Array of double precision floating number
   # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
   define_blas_routine :dnrm2, %w<int pointer int>, :double
 
-  ## SNRM2 routine
+  # @!method snrm2(n, x, incx)
+  # SNRM2 routine
   # @param [Integer] n size of x
   # @param [SArray] x Array of single precision floating number
   # @param [Integer] incx storage spacing of x
