@@ -58,6 +58,7 @@ module BlasLapackFFI
       end
     end
     attr_reader :ptr
+    alias to_ptr ptr
   end
 
   class DArray < Array

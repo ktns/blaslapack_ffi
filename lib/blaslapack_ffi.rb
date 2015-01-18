@@ -24,21 +24,37 @@ require "blaslapack_ffi/array"
 module BlasLapackFFI
   class FortranArguments < FFI::Struct
     # Allocate a struct and initialize members
-    def initialize hash
+    def initialize *values
       super()
-      hash.each do |k,v|
-        self[k] = v
+      members.zip values do |k,v|
+        case layout[k].type
+        when FFI::Type::Builtin::POINTER
+          case v
+          when FFI::Pointer, nil
+            self[k] = v
+          else
+            self[k] = v.to_ptr
+          end
+        else
+          self[k] = v
+        end
       end
     end
 
     # Define a new struct for arguments of a FORTRAN function
-    # @param layout [Array] Specifies the layout of the new struct
+    # @param types [Array<Symbol,String>] types of arguments of a FORTRAN function
     # @return the new class that represents the new struct
-    def self.define layout
+    def self.define *types
+      layout = types.each_with_index.flat_map do |t, i|
+        next :"arg#{i}", t.to_sym
+      end
       Class.new(self) do
-        self.layout layout
+        self.layout *layout
+        public_class_method :new
       end
     end
+
+    private_class_method :new
 
     # @return [Array] Returns an array of pointers to each members
     def to_pointers
@@ -50,44 +66,43 @@ module BlasLapackFFI
         end
       end
     end
+
+    def inspect
+      "#<#{self.class}:#{(members).zip(values).map{|n,v| "#{n} => #{v}"}.join(', ')}>"
+    end
   end
 
   module BlasFFI
     extend FFI::Library
 
     ffi_lib "libblas.so"
-
-    ##
-    # DNRM2 routine
-    # @return [Float] Euclidean norm of x
-    attach_function :dnrm2, :dnrm2_, [:pointer, :pointer, :pointer], :double
-    ##
-    # SNRM2 routine
-    # @return [Float] Euclidean norm of x
-    attach_function :snrm2, :snrm2_, [:pointer, :pointer, :pointer], :float
   end
 
-  DNRM2_ARGS = FortranArguments.define(n: :int, x: :pointer, incx: :int)
-  # DNRM2 routine
-  # @param [SArray] ary Array of double precision floating number
+  # Define a wrapper method of a BLAS routine
+  # @param name [Symbol,String] name of a BLAS routine, without trailing underscore
+  # @param arguments [Array<String, Symbol>] types of arguments for a BLAS routine
+  # @param return_type [String, Symbol] type of return value
+  def self.define_blas_routine name, arguments, return_type = :void
+    arguments = FortranArguments.define(*arguments)
+    const_set(:"#{name}_ARGS".upcase, arguments)
+    BlasFFI.attach_function(name.to_sym, :"#{name}_", [:pointer]*arguments.members.count, return_type)
+    define_method name.to_sym do |*args|
+      args=BlasLapackFFI.const_get(:"#{name}_ARGS".upcase).new(*args)
+      BlasFFI::send(name.to_sym, *args.to_pointers)
+    end
+  end
+
+  ## DNRM2 routine
+  # @param [Integer] n size of x
+  # @param [DArray] x Array of double precision floating number
+  # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
-  def dnrm2 ary
-    raise TypeError unless ary.is_a?(DArray)
-    incx=ary.incx rescue 1
-    n = ary.size
-    args = DNRM2_ARGS.new(n: n, incx: incx, x: ary.ptr)
-    return BlasFFI::dnrm2(*args.to_pointers)
-  end
+  define_blas_routine :dnrm2, %w<int pointer int>, :double
 
-  SNRM2_ARGS = FortranArguments.define(n: :int, x: :pointer, incx: :int)
-  # SNRM2 routine
-  # @param [SArray] ary Array of single precision floating number
+  ## SNRM2 routine
+  # @param [Integer] n size of x
+  # @param [SArray] x Array of single precision floating number
+  # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
-  def snrm2 ary
-    raise TypeError unless ary.is_a?(SArray)
-    incx=ary.incx rescue 1
-    n = ary.size
-    args = DNRM2_ARGS.new(n: n, incx: incx, x: ary.ptr)
-    return BlasFFI::snrm2(*args.to_pointers)
-  end
+  define_blas_routine :snrm2, %w<int pointer int>, :float
 end

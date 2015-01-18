@@ -31,22 +31,14 @@ describe BlasLapackFFI, random_array: random_array do
   let(:norm){random_array.inject(0){|s,n| s+n**2}**0.5}
 
   describe '#dnrm2' do
-    context '(DArray%p)' % [random_array] do
-      specify{expect(dnrm2(DArray[*random_array])).to be_within(1e-5).of(norm)}
-    end
-
-    context '(SArray[1])' do
-      specify{expect{dnrm2(SArray[*random_array])}.to raise_error TypeError}
+    context '(%d, DArray%p, %d)' % [random_array.count, random_array, 1] do
+      specify{expect(dnrm2(random_array.size, DArray[*random_array], 1)).to be_within(1e-5).of(norm)}
     end
   end
 
   describe '#snrm2' do
-    context '(SArray%p)' % [random_array] do
-      specify{expect(snrm2(SArray[*random_array])).to be_within(1e-5).of(norm)}
-    end
-
-    context '(DArray[1])' do
-      specify{expect{snrm2(DArray[*random_array])}.to raise_error TypeError}
+    context '(%d, SArray%p, %d)' % [random_array.count, random_array, 1] do
+      specify{expect(snrm2(random_array.size, SArray[*random_array], 1)).to be_within(1e-5).of(norm)}
     end
   end
 end
