@@ -71,12 +71,14 @@ module BlasLapackFFI
       "#<#{self.class}:#{(members).zip(values).map{|n,v| "#{n} => #{v}"}.join(', ')}>"
     end
   end
+  private_constant :FortranArguments
 
   module BlasFFI
     extend FFI::Library
 
     ffi_lib "libblas.so"
   end
+  private_constant :BlasFFI
 
   # Define a wrapper method of a BLAS routine
   # @param name [Symbol,String] name of a BLAS routine, without trailing underscore

@@ -33,6 +33,7 @@ module BlasLapackFFI
       @ptr.get(i)
     end
 
+    # @api private
     module Singleton
       def [] *args
         self.new(args.size).tap do |a|
@@ -57,6 +58,7 @@ module BlasLapackFFI
         raise NotImplementedError
       end
     end
+    private_constant :Pointer
     attr_reader :ptr
     alias to_ptr ptr
   end
@@ -77,6 +79,7 @@ module BlasLapackFFI
         get_double(i*type_size)
       end
     end
+    private_constant :Pointer
   end
 
   class SArray < Array
@@ -95,5 +98,6 @@ module BlasLapackFFI
         get_float(i*type_size)
       end
     end
+    private_constant :Pointer
   end
 end
