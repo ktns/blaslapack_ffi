@@ -115,7 +115,7 @@ module BlasLapackFFI
       define_method name.to_sym do |*args|
         args=BlasLapackFFI.const_get(:"#{name}_ARGS".upcase).new(*args)
         ret = BlasFFI::send(name.to_sym, *args.to_pointers)
-        return_proc.call(args, ret)
+        return_proc.call(args.values, ret)
       end
     else
       define_method name.to_sym do |*args|
@@ -149,7 +149,5 @@ module BlasLapackFFI
   # @see http://www.mathkeisan.com/usersguide/man/drotg.html
   define_blas_routine :drotg, %w<double double double double>,
     outonly: [false, false, true, true],
-    return_proc: proc{|args, ret|
-      [args[:arg0], args[:arg1], args[:arg2], args[:arg3]]
-    }
+    return_proc: proc{|(r,z,c,s), _| [r,z,c,s]}
 end
