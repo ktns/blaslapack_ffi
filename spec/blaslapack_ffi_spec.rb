@@ -59,4 +59,14 @@ describe BlasLapackFFI, random_array: random_array do
       its(:s){ is_expected.to be_within(1e-5).of(4.quo(5)) }
     end
   end
+
+  describe '#srotg' do
+    context '(3,4)' do
+      subject{Struct.new(:r, :z, :c, :s).new(*drotg(3,4))}
+      its(:r){ is_expected.to be_within(1e-5).of(5)        }
+      its(:z){ is_expected.to be_within(1e-5).of(5.quo(3)) }
+      its(:c){ is_expected.to be_within(1e-5).of(3.quo(5)) }
+      its(:s){ is_expected.to be_within(1e-5).of(4.quo(5)) }
+    end
+  end
 end

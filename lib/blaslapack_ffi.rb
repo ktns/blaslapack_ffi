@@ -150,4 +150,14 @@ module BlasLapackFFI
   define_blas_routine :drotg, %w<double double double double>,
     outonly: [false, false, true, true],
     return_proc: proc{|(r,z,c,s), _| [r,z,c,s]}
+
+  # @!method srotg(a, b)
+  # SROTG routine
+  # @param [Float] a X coordinate of P
+  # @param [Float] b Y coordinate of P
+  # @return [Array<Float>] r, z, c, s parameters of Givens rotation
+  # @see http://www.mathkeisan.com/usersguide/man/srotg.html
+  define_blas_routine :srotg, %w<float float float float>,
+    outonly: [false, false, true, true],
+    return_proc: proc{|(r,z,c,s), _| [r,z,c,s]}
 end
