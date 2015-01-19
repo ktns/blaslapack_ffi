@@ -25,8 +25,10 @@ module BlasLapackFFI
   class FortranArguments < FFI::Struct
     # Allocate a struct and initialize members
     def initialize *values
+      input_members = self.class.const_get(:InputMembers)
+      raise ArgumentError, "Expected %p and %p have the same size!" % [input_members, values] unless input_members.count == values.count
       super()
-      members.zip values do |k,v|
+      input_members.zip values do |k,v|
         case layout[k].type
         when FFI::Type::Builtin::POINTER
           case v
@@ -43,13 +45,19 @@ module BlasLapackFFI
 
     # Define a new struct for arguments of a FORTRAN function
     # @param types [Array<Symbol,String>] types of arguments of a FORTRAN function
+    # @param outonly [Array<true, false>] true if the corresponding argument is output only
     # @return the new class that represents the new struct
-    def self.define *types
+    def self.define *types, outonly: [false]*types.count
+      raise ArgumentError, "Expected %p and %p have the same size!" % [types, outonly] unless types.count == outonly.count
       layout = types.each_with_index.flat_map do |t, i|
         next :"arg#{i}", t.to_sym
       end
+      input_members = outonly.each_with_index.map do |oonly, i|
+        oonly ? nil : :"arg#{i}"
+      end.compact
       Class.new(self) do
         self.layout *layout
+        const_set(:InputMembers, input_members)
         public_class_method :new
       end
     end
@@ -83,14 +91,24 @@ module BlasLapackFFI
   # Define a wrapper method of a BLAS routine
   # @param name [Symbol,String] name of a BLAS routine, without trailing underscore
   # @param arguments [Array<String, Symbol>] types of arguments for a BLAS routine
+  # @param outonly [Array<true, false>] true if the corresponding argument is output only
   # @param return_type [String, Symbol] type of return value
-  def self.define_blas_routine name, arguments, return_type = :void
-    arguments = FortranArguments.define(*arguments)
+  # @param return_proc [Proc<args, ret>] This proc called after BLAS routine. The returned value is returned by wrapper function.
+  def self.define_blas_routine name, arguments, outonly: [false]*arguments.count, return_type: :void, return_proc: nil
+    arguments = FortranArguments.define(*arguments, outonly: outonly)
     const_set(:"#{name}_ARGS".upcase, arguments)
     BlasFFI.attach_function(name.to_sym, :"#{name}_", [:pointer]*arguments.members.count, return_type)
-    define_method name.to_sym do |*args|
-      args=BlasLapackFFI.const_get(:"#{name}_ARGS".upcase).new(*args)
-      BlasFFI::send(name.to_sym, *args.to_pointers)
+    if return_proc
+      define_method name.to_sym do |*args|
+        args=BlasLapackFFI.const_get(:"#{name}_ARGS".upcase).new(*args)
+        ret = BlasFFI::send(name.to_sym, *args.to_pointers)
+        return_proc.call(args, ret)
+      end
+    else
+      define_method name.to_sym do |*args|
+        args=BlasLapackFFI.const_get(:"#{name}_ARGS".upcase).new(*args)
+        BlasFFI::send(name.to_sym, *args.to_pointers)
+      end
     end
   end
 
@@ -100,7 +118,7 @@ module BlasLapackFFI
   # @param [DArray] x Array of double precision floating number
   # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
-  define_blas_routine :dnrm2, %w<int pointer int>, :double
+  define_blas_routine :dnrm2, %w<int pointer int>, return_type: :double
 
   # @!method snrm2(n, x, incx)
   # SNRM2 routine
@@ -108,5 +126,5 @@ module BlasLapackFFI
   # @param [SArray] x Array of single precision floating number
   # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
-  define_blas_routine :snrm2, %w<int pointer int>, :float
+  define_blas_routine :snrm2, %w<int pointer int>, return_type: :float
 end
