@@ -127,4 +127,16 @@ module BlasLapackFFI
   # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
   define_blas_routine :snrm2, %w<int pointer int>, return_type: :float
+
+  # @!method drotg(a, b)
+  # DROTG routine
+  # @param [Float] a X coordinate of P
+  # @param [Float] b Y coordinate of P
+  # @return [Array<Float>] r, z, c, s parameters of Givens rotation
+  # @see http://www.mathkeisan.com/usersguide/man/drotg.html
+  define_blas_routine :drotg, %w<double double double double>,
+    outonly: [false, false, true, true],
+    return_proc: proc{|args, ret|
+      [args[:arg0], args[:arg1], args[:arg2], args[:arg3]]
+    }
 end
