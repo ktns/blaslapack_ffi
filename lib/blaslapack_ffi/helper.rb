@@ -49,14 +49,18 @@ module BlasLapackFFI
       end
 
       # Define a new struct for arguments of a FORTRAN function
-      # @param types [Array<Symbol,String>] types of arguments of a FORTRAN function
+      # @param types [Array<Symbol,String, Class>] types of arguments of a FORTRAN function
       # @param outonly [Array<true, false>] true if the corresponding argument is output only
       # @return the new class that represents the new struct
       def self.define *types, outonly: [false]*types.count
         raise ArgumentError, "Expected %p and %p have the same size!" % [types, outonly] unless types.count == outonly.count
         layout = types.each_with_index.flat_map do |t, i|
-          if (t < BlasLapackFFI::Array rescue false)
-            :pointer
+          if t.kind_of? Class
+            if t < BlasLapackFFI::Array
+              :pointer
+            else
+              raise ArgumentError, "Expected Symbol, String or #{Array} but #{t}"
+            end
           else
             t.to_sym
           end.tap do |t|
@@ -95,7 +99,7 @@ module BlasLapackFFI
 
     # Define a wrapper method of a BLAS routine
     # @param name [Symbol,String] name of a BLAS routine, without trailing underscore
-    # @param arguments [Array<String, Symbol>] types of arguments for a BLAS routine
+    # @param arguments [Array<String, Symbol, Class>] types of arguments for a BLAS routine
     # @param outonly [Array<true, false>] true if the corresponding argument is output only
     # @param return_type [String, Symbol] type of return value
     # @param return_proc [Proc<args, ret>] This proc called after BLAS routine. The returned value is returned by wrapper function.
