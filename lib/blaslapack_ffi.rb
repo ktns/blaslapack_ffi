@@ -28,18 +28,24 @@ module BlasLapackFFI
       input_members = self.class.const_get(:InputMembers)
       raise ArgumentError, "Expected %p and %p have the same size!" % [input_members, values] unless input_members.count == values.count
       super()
-      input_members.zip values do |k,v|
+      self.class.const_get(:InputTypes).zip input_members, values do |t, k, v|
         case layout[k].type
         when FFI::Type::Builtin::POINTER
           case v
           when FFI::Pointer, nil
-            self[k] = v
+            v
+          when ::Array
+            if t.kind_of? Class and t < BlasLapackFFI::Array
+              t[*v]
+            else
+              v
+            end
           else
-            self[k] = v.to_ptr
+            v.to_ptr
           end
         else
-          self[k] = v
-        end
+          v
+        end.tap{|v| self[k] = v}
       end
     end
 
@@ -50,14 +56,21 @@ module BlasLapackFFI
     def self.define *types, outonly: [false]*types.count
       raise ArgumentError, "Expected %p and %p have the same size!" % [types, outonly] unless types.count == outonly.count
       layout = types.each_with_index.flat_map do |t, i|
-        next :"arg#{i}", t.to_sym
+        if (t < BlasLapackFFI::Array rescue false)
+          :pointer
+        else
+          t.to_sym
+        end.tap do |t|
+          break :"arg#{i}", t
+        end
       end
-      input_members = outonly.each_with_index.map do |oonly, i|
-        oonly ? nil : :"arg#{i}"
-      end.compact
+      input_members, input_types = outonly.each_with_index.map do |oonly, i|
+        oonly ? nil : [:"arg#{i}", types[i]]
+      end.compact.transpose
       Class.new(self) do
         self.layout *layout
         const_set(:InputMembers, input_members)
+        const_set(:InputTypes, input_types)
         public_class_method :new
       end
     end
@@ -115,18 +128,18 @@ module BlasLapackFFI
   # @!method dnrm2(n, x, incx)
   # DNRM2 routine
   # @param [Integer] n size of x
-  # @param [DArray] x Array of double precision floating number
+  # @param [DArray, Array] x Array of double precision floating number
   # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
-  define_blas_routine :dnrm2, %w<int pointer int>, return_type: :double
+  define_blas_routine :dnrm2, [:int, DArray, :int], return_type: :double
 
   # @!method snrm2(n, x, incx)
   # SNRM2 routine
   # @param [Integer] n size of x
-  # @param [SArray] x Array of single precision floating number
+  # @param [SArray, Array] x Array of single precision floating number
   # @param [Integer] incx storage spacing of x
   # @return [Float] Euclidean norm of x
-  define_blas_routine :snrm2, %w<int pointer int>, return_type: :float
+  define_blas_routine :snrm2, [:int, SArray, :int], return_type: :float
 
   # @!method drotg(a, b)
   # DROTG routine
